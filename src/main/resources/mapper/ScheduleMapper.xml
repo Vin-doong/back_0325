@@ -4,16 +4,16 @@
 
 <mapper namespace="com.suppleit.backend.mapper.ScheduleMapper">
 
+    <!-- 날짜 및 Enum 타입 핸들링을 위한 resultMap -->
     <resultMap id="scheduleResultMap" type="com.suppleit.backend.model.Schedule">
         <id property="scheduleId" column="schedule_id"/>
-        <result property="intakeStart" column="intake_start"/>
-        <result property="intakeDistance" column="intake_distance"/>
-        <result property="intakeEnd" column="intake_end"/>
-        <result property="intakeTime" column="intake_time"/>
-        <result property="memo" column="memo"/>
-        <result property="memberId" column="member_id"/>
-        <result property="prdId" column="prd_id"/>
-        <result property="productName" column="product_name"/>
+        <result property="intakeStart" column="intake_start" jdbcType="DATE"/>
+        <result property="intakeDistance" column="intake_distance" jdbcType="INTEGER"/>
+        <result property="intakeEnd" column="intake_end" jdbcType="DATE"/>
+        <result property="intakeTime" column="intake_time" jdbcType="VARCHAR"/>
+        <result property="memo" column="memo" jdbcType="VARCHAR"/>
+        <result property="memberId" column="member_id" jdbcType="BIGINT"/>
+        <result property="prdId" column="prd_id" jdbcType="BIGINT"/>
     </resultMap>
 
     <!-- 스케줄 등록 -->
@@ -27,17 +27,17 @@
             member_id, 
             prd_id
         ) VALUES (
-            #{intakeStart}, 
-            #{intakeDistance}, 
-            #{intakeEnd}, 
-            #{intakeTime}, 
-            #{memo}, 
-            #{memberId}, 
-            #{prdId}
+            #{intakeStart, jdbcType=DATE}, 
+            #{intakeDistance, jdbcType=INTEGER}, 
+            #{intakeEnd, jdbcType=DATE}, 
+            #{intakeTime, jdbcType=VARCHAR}, 
+            #{memo, jdbcType=VARCHAR}, 
+            #{memberId, jdbcType=BIGINT}, 
+            #{prdId, jdbcType=BIGINT}
         )
     </insert>
 
-    <!-- 특정 회원의 모든 스케줄 조회 (JOIN 적용) -->
+    <!-- 특정 회원의 모든 스케줄 조회 -->
     <select id="getSchedulesByMemberId" resultMap="scheduleResultMap">
         SELECT s.*, p.product_name
         FROM Schedule s
@@ -54,10 +54,10 @@
         WHERE s.member_id = #{memberId}
           AND #{date} BETWEEN s.intake_start AND COALESCE(s.intake_end, '9999-12-31')
         ORDER BY 
-            CASE 
-                WHEN s.intake_time = '아침' THEN 1
-                WHEN s.intake_time = '점심' THEN 2
-                WHEN s.intake_time = '저녁' THEN 3
+            CASE s.intake_time 
+                WHEN '아침' THEN 1
+                WHEN '점심' THEN 2
+                WHEN '저녁' THEN 3
                 ELSE 4
             END
     </select>
@@ -71,13 +71,13 @@
           AND (
             (s.intake_start BETWEEN #{startDate} AND #{endDate}) OR
             (s.intake_end BETWEEN #{startDate} AND #{endDate}) OR
-            (s.intake_start <= #{startDate} AND (s.intake_end >= #{endDate} OR s.intake_end IS NULL))
+            (s.intake_start &lt;= #{startDate} AND (s.intake_end >= #{endDate} OR s.intake_end IS NULL))
           )
         ORDER BY s.intake_start, 
-            CASE 
-                WHEN s.intake_time = '아침' THEN 1
-                WHEN s.intake_time = '점심' THEN 2
-                WHEN s.intake_time = '저녁' THEN 3
+            CASE s.intake_time 
+                WHEN '아침' THEN 1
+                WHEN '점심' THEN 2
+                WHEN '저녁' THEN 3
                 ELSE 4
             END
     </select>
@@ -94,14 +94,13 @@
     <update id="updateSchedule">
         UPDATE Schedule
         SET 
-            intake_start = #{intakeStart},
-            intake_distance = #{intakeDistance},
-            intake_end = #{intakeEnd},
-            intake_time = #{intakeTime},
-            memo = #{memo},
-            prd_id = #{prdId}
+            intake_start = #{intakeStart, jdbcType=DATE},
+            intake_distance = #{intakeDistance, jdbcType=INTEGER},
+            intake_end = #{intakeEnd, jdbcType=DATE},
+            intake_time = #{intakeTime, jdbcType=VARCHAR},
+            memo = #{memo, jdbcType=VARCHAR},
+            prd_id = #{prdId, jdbcType=BIGINT}
         WHERE schedule_id = #{scheduleId}
-          AND member_id = #{memberId}
     </update>
 
     <!-- 스케줄 삭제 -->

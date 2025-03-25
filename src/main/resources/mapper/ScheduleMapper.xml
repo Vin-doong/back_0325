@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.suppleit.backend.mapper.ScheduleMapper">
+
+    <resultMap id="scheduleResultMap" type="com.suppleit.backend.model.Schedule">
+        <id property="scheduleId" column="schedule_id"/>
+        <result property="intakeStart" column="intake_start"/>
+        <result property="intakeDistance" column="intake_distance"/>
+        <result property="intakeEnd" column="intake_end"/>
+        <result property="intakeTime" column="intake_time"/>
+        <result property="memo" column="memo"/>
+        <result property="memberId" column="member_id"/>
+        <result property="prdId" column="prd_id"/>
+        <result property="productName" column="product_name"/>
+    </resultMap>
+
+    <!-- 스케줄 등록 -->
+    <insert id="insertSchedule" useGeneratedKeys="true" keyProperty="scheduleId">
+        INSERT INTO Schedule (
+            intake_start, 
+            intake_distance, 
+            intake_end, 
+            intake_time, 
+            memo, 
+            member_id, 
+            prd_id
+        ) VALUES (
+            #{intakeStart}, 
+            #{intakeDistance}, 
+            #{intakeEnd}, 
+            #{intakeTime}, 
+            #{memo}, 
+            #{memberId}, 
+            #{prdId}
+        )
+    </insert>
+
+    <!-- 특정 회원의 모든 스케줄 조회 (JOIN 적용) -->
+    <select id="getSchedulesByMemberId" resultMap="scheduleResultMap">
+        SELECT s.*, p.product_name
+        FROM Schedule s
+        LEFT JOIN Product p ON s.prd_id = p.prd_id
+        WHERE s.member_id = #{memberId}
+        ORDER BY s.intake_start DESC
+    </select>
+
+    <!-- 일별 스케줄 조회 -->
+    <select id="getDailySchedules" resultMap="scheduleResultMap">
+        SELECT s.*, p.product_name
+        FROM Schedule s
+        LEFT JOIN Product p ON s.prd_id = p.prd_id
+        WHERE s.member_id = #{memberId}
+          AND #{date} BETWEEN s.intake_start AND COALESCE(s.intake_end, '9999-12-31')
+        ORDER BY 
+            CASE 
+                WHEN s.intake_time = '아침' THEN 1
+                WHEN s.intake_time = '점심' THEN 2
+                WHEN s.intake_time = '저녁' THEN 3
+                ELSE 4
+            END
+    </select>
+
+    <!-- 주간 스케줄 조회 -->
+    <select id="getWeeklySchedules" resultMap="scheduleResultMap">
+        SELECT s.*, p.product_name
+        FROM Schedule s
+        LEFT JOIN Product p ON s.prd_id = p.prd_id
+        WHERE s.member_id = #{memberId}
+          AND (
+            (s.intake_start BETWEEN #{startDate} AND #{endDate}) OR
+            (s.intake_end BETWEEN #{startDate} AND #{endDate}) OR
+            (s.intake_start <= #{startDate} AND (s.intake_end >= #{endDate} OR s.intake_end IS NULL))
+          )
+        ORDER BY s.intake_start, 
+            CASE 
+                WHEN s.intake_time = '아침' THEN 1
+                WHEN s.intake_time = '점심' THEN 2
+                WHEN s.intake_time = '저녁' THEN 3
+                ELSE 4
+            END
+    </select>
+
+    <!-- 스케줄 상세 조회 -->
+    <select id="getScheduleById" resultMap="scheduleResultMap">
+        SELECT s.*, p.product_name
+        FROM Schedule s
+        LEFT JOIN Product p ON s.prd_id = p.prd_id
+        WHERE s.schedule_id = #{scheduleId}
+    </select>
+
+    <!-- 스케줄 수정 -->
+    <update id="updateSchedule">
+        UPDATE Schedule
+        SET 
+            intake_start = #{intakeStart},
+            intake_distance = #{intakeDistance},
+            intake_end = #{intakeEnd},
+            intake_time = #{intakeTime},
+            memo = #{memo},
+            prd_id = #{prdId}
+        WHERE schedule_id = #{scheduleId}
+          AND member_id = #{memberId}
+    </update>
+
+    <!-- 스케줄 삭제 -->
+    <delete id="deleteSchedule">
+        DELETE FROM Schedule 
+        WHERE schedule_id = #{scheduleId}
+    </delete>
+
+</mapper>
